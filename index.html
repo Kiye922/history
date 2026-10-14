@@ -1,0 +1,685 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中国历史朝代脉络全景</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:#FBFAF7; font-family:'PingFang SC','Microsoft YaHei',sans-serif; color:#1A1B1C; }
+.title-bar {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  background:#FBFAF7; border-bottom:1px solid #E4E3DD;
+  padding:10px 16px; text-align:center;
+}
+.title-bar h1 { font-size:17px; }
+.title-bar .sub { font-size:11px; color:#6B7280; margin-top:2px; }
+.body { padding-top:64px; }
+
+.layout { display:flex; }
+.col-name { width:76px; flex-shrink:0; position:sticky; left:0; background:#FBFAF7; z-index:10; border-right:1px solid #E4E3DD; }
+.col-scroll { flex:1; overflow-x:auto; -webkit-overflow-scrolling:touch; position:relative; }
+.col-inner { min-width:680px; position:relative; padding-right:20px; }
+
+.year-divider { position:absolute; top:0; bottom:0; width:0; border-left:1px dashed #C0504D; box-shadow:0 0 2px rgba(192,80,77,0.3); z-index:1; }
+.ref-line { position:absolute; top:0; bottom:0; width:0; border-left:1px dashed rgba(0,0,0,0.12); z-index:0; }
+.ref-line-label { position:absolute; top:4px; font-size:9px; color:#999; transform:translateX(4px); white-space:nowrap; }
+.year-divider-label { position:absolute; top:4px; font-size:10px; color:#C0504D; font-weight:600; transform:translateX(6px); white-space:nowrap; }
+
+.dyn-row { height:38px; border-bottom:1px solid rgba(0,0,0,0.04); position:relative; cursor:pointer; display:flex; align-items:center; }
+.dyn-name { font-size:12px; font-weight:600; text-align:right; padding-right:8px; width:76px; flex-shrink:0; background:#FBFAF7; }
+.dyn-bar-wrap { flex:1; position:relative; height:24px; display:flex; align-items:center; }
+.dyn-bar { position:absolute; height:18px; border-radius:3px; opacity:0.88; }
+.dyn-bar-label { position:absolute; font-size:9.5px; color:#1A1B1C; white-space:nowrap; padding-left:4px; line-height:16px; }
+.dyn-row.active .dyn-bar { opacity:1; outline:2px solid #1A1B1C; outline-offset:1px; }
+
+.wrap-fade { position:relative; }
+.wrap-fade::after {
+  content:''; position:absolute; top:0; right:0; bottom:0; width:24px;
+  background:linear-gradient(to left, #FBFAF7, transparent);
+  pointer-events:none; z-index:5;
+}
+
+.tag { display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; font-weight:600; }
+.t-zheng { background:#d4edda; color:#155724; }
+.t-chuan { background:#ffe5cc; color:#8a4b00; }
+.t-yanyi { background:#e9d8f4; color:#5b2a86; }
+.t-cunyi { background:#f8d7da; color:#721c24; }
+
+.float-legend {
+  position:fixed; right:12px; top:70px; z-index:400;
+  background:rgba(255,255,255,0.95); border:1px solid #E4E3DD; border-radius:8px;
+  padding:8px 12px; font-size:11px; color:#6B7280; line-height:1.9;
+  box-shadow:0 2px 8px rgba(0,0,0,0.08); max-width:210px;
+}
+.float-legend b { color:#1A1B1C; font-size:11px; }
+.float-legend .tag { margin:0 3px 0 0; font-size:10px; padding:0 5px; }
+
+.panel { display:none; padding:14px 18px; background:#fff; border:1px solid #E4E3DD; border-radius:10px; margin:6px 0 10px 0; font-size:13.5px; line-height:1.75; }
+.panel.open { display:block; }
+.panel-head { position:relative; }
+.panel h2 { margin:0 0 6px; font-size:18px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.badge { color:#fff; padding:2px 10px; border-radius:10px; font-size:12px; font-weight:400; }
+.meta { color:#374151; margin:4px 0 10px; padding-bottom:8px; border-bottom:1px dashed #E4E3DD; }
+.rulers { margin:8px 0; padding-left:6px; }
+.ruler { margin:6px 0; padding:6px 8px 6px 14px; background:#fafafa; border-radius:6px; border-left:3px solid #C0504D; position:relative; }
+.ruler:not(:last-child)::after { content:"↓"; position:absolute; left:7px; bottom:-13px; font-size:10px; color:#C0504D; opacity:0.4; z-index:1; }
+.ruler-name { font-weight:600; color:#1A1B1C; }
+.reign { font-weight:400; font-size:11px; color:#6B7280; margin-left:8px; }
+.ruler-deeds { margin-top:3px; color:#374151; font-size:13px; }
+.ruler.collapsed { background:transparent; border-left-color:#ccc; border-left-style:dashed; }
+.ruler.collapsed .ruler-name { font-weight:500; color:#666; }
+.ruler.collapsed .ruler-deeds { color:#888; font-size:12.5px; }
+.ruler-note { margin-top:2px; font-size:12.5px; color:#6B7280; font-style:italic; }
+.section { margin-top:14px; padding-top:10px; border-top:1px dashed #E4E3DD; }
+.section-title { font-weight:700; color:#3D7A5F; font-size:14px; margin-bottom:6px; }
+.story { margin:4px 0; padding:4px 0; border-bottom:1px dotted #eee; cursor:pointer; }
+.story:last-child { border-bottom:none; }
+.story-name { font-weight:600; color:#1A1B1C; }
+.story-tag { display:inline-block; padding:0 6px; border-radius:3px; font-size:10px; font-weight:600; margin-left:6px; vertical-align:middle; }
+.s-zheng { background:#d4edda; color:#155724; }
+.s-chuan { background:#ffe5cc; color:#8a4b00; }
+.s-yanyi { background:#e9d8f4; color:#5b2a86; }
+.s-cunyi { background:#f8d7da; color:#721c24; }
+.story-desc { display:none; margin-top:4px; padding:6px 10px; background:#fafafa; border-radius:6px; font-size:12.5px; color:#555; line-height:1.6; }
+.story.open .story-desc { display:block; }
+
+.story-type { display:inline-block; padding:0 5px; border-radius:3px; font-size:9px; font-weight:600; margin-left:4px; vertical-align:middle; }
+.t-politics { background:#dbeafe; color:#1e40af; }
+.t-military { background:#fee2e2; color:#991b1b; }
+.t-econ { background:#fef3c7; color:#92400e; }
+.t-culture { background:#d1fae5; color:#065f46; }
+.t-idiom { background:#ede9fe; color:#5b21b6; }
+.story-meta { font-size:10px; color:#888; margin-left:6px; }
+
+.story-arrow { display:inline-block; font-size:10px; color:#999; margin-right:4px; transition:transform .2s; }
+.story.open .story-arrow { transform:rotate(90deg); }
+#overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:900; }
+#overlay.show { display:block; }
+body.locked { overflow:hidden; }
+.panel-close { display:none; }
+
+@media (min-width:641px){
+  .panel.open {
+    position:fixed; top:0; right:0; bottom:0; width:440px; max-width:45vw;
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    border-radius:0; border:1px solid #E4E3DD; border-left:1px solid #ddd;
+    z-index:1000; margin:0; padding:0;
+    box-shadow:-4px 0 24px rgba(0,0,0,0.15); background:#fff !important;
+    animation:slideIn .25s ease-out;
+  }
+  @keyframes slideIn { from{ transform:translateX(100%); } to{ transform:translateX(0); } }
+  .panel.open .panel-head { position:sticky; top:0; background:#fff; z-index:5; padding:14px 18px 10px; border-bottom:1px solid #eee; }
+  .panel.open .panel-body { padding:4px 18px 28px; }
+  .panel-close { display:block; position:absolute; top:10px; right:14px; width:30px; height:30px; line-height:28px; text-align:center; border-radius:50%; background:#f0f0f0; cursor:pointer; font-size:16px; color:#666; z-index:10; }
+}
+
+@media (max-width:640px){
+  .panel.open {
+    position:fixed; left:0; right:0; bottom:0;
+    max-height:75vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    border-radius:16px 16px 0 0; border:1px solid #E4E3DD; border-bottom:none;
+    z-index:1000; margin:0; padding:0;
+    box-shadow:0 -4px 24px rgba(0,0,0,0.2); background:#fff !important;
+  }
+  .panel.open .panel-head { position:sticky; top:0; background:#fff; z-index:5; padding:14px 18px 10px; border-bottom:1px solid #eee; }
+  .panel.open .panel-body { padding:4px 18px 28px; position:relative; }
+    .panel.open .panel-body::after { content:''; position:sticky; bottom:0; left:0; right:0; height:30px; background:linear-gradient(transparent, #fff); pointer-events:none; }
+  .panel-close { display:block; position:absolute; top:10px; right:14px; width:30px; height:30px; line-height:28px; text-align:center; border-radius:50%; background:#f0f0f0; cursor:pointer; font-size:16px; color:#666; z-index:10; }
+}
+</style>
+</head>
+<body>
+<div class="title-bar">
+  <h1>中国历史朝代脉络全景</h1>
+  <div class="sub">约前2070年（夏）— 公元1912年（清亡）· 点击朝代查看详情</div>
+</div>
+
+<div class="body">
+<div class="wrap-fade">
+<div class="layout">
+  <div class="col-name" id="colName"></div>
+  <div class="col-scroll" id="colScroll">
+    <div class="col-inner" id="colInner">
+      <div id="rows"></div>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="float-legend">
+  <b>典故与成语来源：</b><br>
+  <span class="tag t-zheng">正史</span>官修正史可考<br>
+  <span class="tag t-chuan">古史传说</span>后世追记<br>
+  <span class="tag t-yanyi">演义</span>小说戏曲渲染<br>
+  <span class="tag t-cunyi">存疑</span>正史模糊
+</div>
+
+<div id="overlay"></div>
+
+<script>
+(function(){
+  var MIN=-3000, MAX=1912, SPAN=MAX-MIN;
+  var W=680;
+  window.P=function(y){ return (y-MIN)/SPAN*W; }
+  window.fmt=function(y){
+    if(y<0) return '前'+(-y)+'年';
+    if(y===0) return '公元元年';
+    return y+'年';
+  }
+  window.fmtRange=function(s,e){ return fmt(s)+'—'+fmt(e); }
+  window.TAGCLASS={'正史':'s-zheng','古史传说':'s-chuan','演义':'s-yanyi','存疑':'s-cunyi'};
+  window.tagHtml=function(tag){ return '<span class="story-tag '+TAGCLASS[tag]+'">'+tag+'</span>'; }
+
+  window.ROWS_DATA=[
+    {n:'史前传说',s:-3000,e:-2070,c:'#C9C4B8',cap:'部落时代（无固定都城）',years:'约1000年',
+     meta:'中华文明传说源头，无文字记载，人物事迹多为后世追记。',
+     rulers:[
+       {name:'黄帝',reign:'传说时代（约公元前2700年）',deeds:'阪泉败炎帝、涿鹿擒蚩尤，统一中原部落；被奉为"人文初祖"。'},
+       {name:'炎帝（神农氏）',reign:'传说时代',deeds:'教民农耕，"神农尝百草"，中华医药与农业的传说始祖。'},
+       {name:'尧 → 舜 → 禹',reign:'传说时代（约公元前2200—前2100年）',deeds:'尧禅让于舜，舜禅让于禹；禹治水有功，被认为是夏朝始祖。'}
+     ],
+     stories:[
+       {name:'大禹治水',tag:'古史传说',type:'culture',era:'舜/禹时代·约前2000年',desc:'禹父子两代治水，禹改堵为疏，十三年走遍九州，三过家门而不入。《史记》有载，但具体细节已不可考。'},
+       {name:'尧舜禅让',tag:'古史传说',type:'politics',era:'尧舜时代·约前2200年',desc:'尧不传子而传贤于舜，舜又传于禹，被后世儒家奉为理想政治典范。近代学者有质疑认为是部落军事民主制的传说化。'},
+       {name:'神农尝百草',tag:'古史传说',type:'culture',era:'传说时代',desc:'传说神农氏一日遇七十二毒，尝百草辨药性，是中华医药的起源神话。'}
+     ],books:[{name:'山海经',author:'战国—汉初多人合集',period:'战国—汉初',life:'多人合集，作者不详',desc:'上古神话地理奇书，保存了夸父逐日、女娲补天等神话。'}]},
+
+    {n:'夏',s:-2070,e:-1600,c:'#E1B98F',cap:'阳城（今河南登封）',years:'约470年',
+     meta:'中国第一个世袭王朝，"家天下"由此开始。二里头遗址被广泛认为与夏代中晚期都邑相关。',
+     rulers:[
+       {name:'禹',reign:'约公元前2070年（在位约45年）',deeds:'治水十三年，三过家门而不入；受舜禅让，建夏。'},
+       {name:'启',reign:'约公元前2025年（在位约9年）',deeds:'禹之子，击败伯益继位，确立世袭制，"公天下"变"家天下"。'},
+       {name:'太康、仲康、相（共三代）',reign:'约公元前1980—前1920年（约60年）',deeds:'三代弱主；太康沉迷游猎失国，东夷后羿、寒浞先后掌权。',note:'史称"太康失国""后羿代夏"。'},
+       {name:'少康',reign:'约公元前1920—前1880年（在位约40年）',deeds:'流亡多年后联合旧臣复国，史称"少康中兴"。'},
+       {name:'予→槐→芒→泄→不降→扃→廑→孔甲→皋→发（共十代）',reign:'约公元前1880—前1650年（约230年）',deeds:'十代君王，国势由稳转衰；孔甲时好方术，诸侯渐叛。',note:'史载简略，无重大事迹。'},
+       {name:'桀（履癸）',reign:'约公元前1650—前1600年（在位约52年）',deeds:'末代暴君，宠妺喜，暴虐无道；鸣条之战被商汤击败，夏亡。'}
+     ],
+     stories:[
+       {name:'太康失国',tag:'正史',type:'politics',era:'夏太康·约前1980年',desc:'太康沉迷打猎，被后羿趁机夺权，史称"太康失国"。是中国历史上最早的权臣篡位记录之一。'},
+       {name:'少康中兴',tag:'正史',type:'politics',era:'夏少康·约前1920年',desc:'少康是相之子，在外公家长大，联合旧臣靡、女艾等灭寒浞复国，是首个"中兴"案例。'},
+       {name:'网开一面',tag:'正史',type:'idiom',era:'商汤·约前1600年',desc:'出自商汤故事：汤见人捕鸟四面张网，命撤其三面，诸侯闻之归心。后来成为成语，比喻宽大为怀。'}
+     ]},
+
+    {n:'商',s:-1600,e:-1046,c:'#D4A574',cap:'亳 → 殷（今河南安阳）',years:'约554年',
+     meta:'甲骨文与青铜器成熟时代。商王世系经殷墟甲骨文印证，与《史记·殷本纪》基本吻合。',
+     rulers:[
+       {name:'汤',reign:'约公元前1600年（在位约12年）',deeds:'鸣条之战灭夏建商；"网开一面"行仁政。'},
+       {name:'外丙、仲壬、太甲（共三代）',reign:'约公元前1580—前1550年（约30年）',deeds:'太甲初即位暴虐，被宰相伊尹放逐桐宫三年，后悔过复位。'},
+       {name:'沃丁、太庚、小甲、雍己、太戊（共五代）',reign:'约公元前1550—前1470年（约80年）',deeds:'太戊时用伊陟、巫咸，商朝中兴。',note:'前四代史载简略。'},
+       {name:'仲丁→外壬→河亶甲→祖乙→祖辛→沃甲→祖丁→南庚→阳甲（共九代）',reign:'约公元前1470—前1300年（约170年）',deeds:'九世之乱，诸侯相伐，商朝多次迁都。',note:'史称"九世之乱"。'},
+       {name:'盘庚',reign:'约公元前1300年（在位约28年）',deeds:'迁都于殷，此后商朝又称"殷商"，国势稳定。'},
+       {name:'小辛、小乙（共两代）',reign:'约公元前1270—前1250年（约20年）',deeds:'两代国君，国势短暂衰落。',note:'史载简略。'},
+       {name:'武丁',reign:'约公元前1250—前1200年（在位约59年）',deeds:'任用傅说为相，开创"武丁中兴"；妻妇好是中国史载最早的女军事家。'},
+       {name:'祖庚→祖甲→廪辛→康丁→武乙→文丁→帝乙（共七代）',reign:'约公元前1200—前1100年（约100年）',deeds:'国势渐衰，周族在西方兴起。',note:'中期七王。'},
+       {name:'纣（帝辛）',reign:'约公元前1100—前1046年（在位约30年）',deeds:'末代君主，穷兵黩武，宠妲己，设炮烙之刑，比干强谏被剖心；牧野之战败于周武王，商亡。'}
+     ],
+     stories:[
+       {name:'盘庚迁殷',tag:'正史',type:'politics',era:'商盘庚·约前1300年',desc:'盘庚不顾贵族反对迁都于殷（今安阳小屯），此后270余年不再迁都，商朝国力回升。殷墟甲骨文即出自此处。'},
+       {name:'酒池肉林',tag:'正史',type:'idiom',era:'商纣·约前1100年',desc:'《史记》载商纣以酒为池、悬肉为林，与妲己裸逐其间。是后世暴君的标准形象，但具体细节可能有周人渲染。'},
+       {name:'比干剖心',tag:'正史',type:'politics',era:'商纣·约前1075年',desc:'纣叔比干强谏，纣怒曰"闻圣人之心有七窍"，剖而观之。是中国史上最早的忠臣死谏典故。'},
+       {name:'甲骨文',tag:'正史',type:'culture',period:'商代',desc:'清末在安阳殷墟发现的商代占卜文字，是中国已知最早的成熟文字，共发现约15万片。'}
+     ],books:[{name:'甲骨文',author:'商代巫史',era:'商',life:'代',desc:'中国已知最早成熟文字，刻于龟甲兽骨，用于占卜。'}]},
+
+    {n:'西周',s:-1046,e:-771,c:'#C9A063',cap:'镐京（今西安）',years:'275年',
+     meta:'确立分封制、宗法制与周礼。公元前841年"共和行政"是中国有确切连续纪年的开端。',
+     rulers:[
+       {name:'周武王（姬发）',reign:'公元前1046—前1043年（在位4年）',deeds:'牧野之战灭商建周；分封诸侯七十一国。'},
+       {name:'周公旦（摄政王，非天子）',reign:'武王→成王时',deeds:'武王之弟，辅佐成王；制礼作乐，奠定周代制度；"周公吐哺"。'},
+       {name:'成王、康王（共两代）',reign:'公元前1042—前996年（约47年）',deeds:'成康之治，天下安宁，刑错四十余年不用。'},
+       {name:'昭王、穆王（共两代）',reign:'公元前995—前922年（约74年）',deeds:'昭王南征楚国淹死；穆王西征犬戎，制《吕刑》。'},
+       {name:'共王、懿王、孝王、夷王（共四代）',reign:'公元前922—前878年（约45年）',deeds:'周室渐衰，戎狄交侵。',note:'中期四王。'},
+       {name:'周厉王（姬胡）',reign:'公元前877—前841年（在位37年）',deeds:'专利敛财，压制言论，引发"国人暴动"，被逐出国都；共和行政开始。'},
+       {name:'周宣王（姬静）',reign:'公元前827—前782年（在位46年）',deeds:'中兴周室，"宣王中兴"；晚年北伐太原戎败绩。'},
+       {name:'周幽王（姬宫湦）',reign:'公元前781—前771年（在位11年）',deeds:'宠褒姒，废太子；申侯联合犬戎攻破镐京，被杀，西周亡。'}
+     ],
+     stories:[
+       {name:'周公吐哺',tag:'正史',type:'politics',era:'周公旦·西周初',desc:'周公"一沐三捉发，一饭三吐哺"，唯恐失去天下贤士。曹操《短歌行》"周公吐哺，天下归心"即用此典。'},
+       {name:'烽火戏诸侯',tag:'存疑',type:'politics',era:'周幽王·前779年',desc:'《史记》载幽王举烽火骗诸侯赶来博褒姒一笑。但清华简《系年》无此事，现代学者多认为是战国时人编造。'},
+       {name:'道路以目',tag:'正史',type:'politics',era:'周厉王·前841年',desc:'周厉王时国人不敢言，路上相遇只敢眼神交流。召公谏"防民之口甚于防川"，最终引发国人暴动。'},
+       {name:'老马识途',tag:'正史',type:'idiom',era:'齐桓公·前663年',desc:'齐桓公北伐孤竹，迷路，管仲放老马随行，遂得道。比喻有经验者能指引方向。'},
+       {name:'分封制',tag:'正史',type:'politics',era:'西周初·前1046年起',desc:'周天子将土地人民分封给宗亲、功臣，建立诸侯国，以拱卫王室。是西周立国的根本制度，也是后来春秋战国诸侯割据的制度根源。'},
+       {name:'宗法制',tag:'正史',type:'politics',era:'西周初·前1046年起',desc:'以嫡长子继承制为核心，区分大宗小宗，确定贵族等级继承权。与分封制互为表里，奠定中国三千年来宗族社会的基本结构。'},
+       {name:'礼乐制度',tag:'正史',type:'culture',era:'周公旦·西周初',desc:'周公旦制定吉、凶、军、宾、嘉五礼和与之配套的乐舞，不同等级使用不同规格。孔子毕生维护的周礼即此，是儒家思想的源头。'}
+     ],books:[{name:'周易（易经）',author:'西周卜官',period:'西周初',life:'传说',desc:'群经之首，以八卦推演天地人事，影响中国哲学三千年。'},{name:'诗经',author:'春秋前结集',period:'春秋中期',life:'传说',desc:'中国最早诗歌总集，收西周至春秋民歌305篇。'},{name:'尚书',author:'上古档案汇编',period:'春秋前',life:'传说',desc:'中国最早历史文献汇编，记载尧舜至商周政事。'}]},
+
+    {n:'东周',s:-770,e:-256,c:'#B8924F',cap:'洛邑（今洛阳）',years:'514年',
+     meta:'分春秋（前770—前476年）与战国（前475—前221年）两段，周天子名存实亡，诸侯争霸、百家争鸣。',
+     rulers:[
+       {name:'周平王（姬宜臼）',reign:'公元前770—前720年（在位51年）',deeds:'东迁洛邑，东周开始；郑庄公小霸。'},
+       {name:'桓王、庄王、釐王、惠王、襄王（共五代）',reign:'公元前719—前619年（约101年）',deeds:'齐桓公、晋文公相继称霸；襄王避难于郑。',note:'春秋早期天子。'},
+       {name:'顷王、匡王、定王、简王、灵王、景王（共六代）',reign:'公元前618—前520年（约99年）',deeds:'楚庄王问鼎中原；吴越争霸；孔子在世。',note:'春秋中期天子。'},
+       {name:'悼王、敬王、元王、贞定王、哀王、思王、考王（共七代）',reign:'公元前520—前426年（约95年）',deeds:'春秋结束，战国开始；三家分晋。',note:'春秋末战国初。'},
+       {name:'威烈王、安王、烈王、显王、慎靓王（共五代）',reign:'公元前425—前315年（约111年）',deeds:'正式承认韩赵魏为诸侯；商鞅变法；百家争鸣鼎盛。',note:'战国中期天子。'},
+       {name:'周赧王（姬延）',reign:'公元前314—前256年（在位59年）',deeds:'末代天子，东西周分治；秦昭襄王灭周，赧王病逝。'}
+     ],
+     stories:[
+       {name:'退避三舍',tag:'正史',type:'military',era:'晋文公·前632年',desc:'晋文公重耳流亡楚时承诺：若晋楚交战，晋军退避三舍（九十里）。后城濮之战果真退避，既兑现承诺又诱敌深入。'},
+       {name:'一鸣惊人',tag:'正史',type:'politics',era:'楚庄王·前613年',desc:'楚庄王即位三年不理政事，后一日而罢昏、一日而称霸。比喻平时默默无闻，突然做出惊人成绩。'},
+       {name:'卧薪尝胆',tag:'存疑',type:'idiom',era:'越王勾践·约前490年',desc:'越王勾践战败后卧薪尝胆二十年，终灭吴。但"卧薪"细节到汉代才出现，《左传》《国语》未载。'},
+       {name:'围魏救赵',tag:'正史',type:'military',era:'齐孙膑·前354年',desc:'战国时魏围赵都邯郸，孙膑不直接救赵，而是直攻魏都，魏军回师途中在桂陵被齐军伏击。是经典的"批亢捣虚"战术。'},
+       {name:'完璧归赵',tag:'正史',type:'idiom',era:'蔺相如·前283年',desc:'蔺相如带和氏璧使秦，识破秦王无割城之意，完璧归赵。后因功与廉颇不和，引发"将相和"。'},
+       {name:'负荆请罪',tag:'正史',type:'idiom',era:'廉颇/蔺相如·前279年',desc:'廉颇不服蔺相如位在己上，蔺相如以国家大局避让。廉颇醒悟，赤裸上身背荆条登门谢罪，两人成为刎颈之交。'},
+       {name:'纸上谈兵',tag:'正史',type:'military',era:'赵括·前260年',desc:'赵括熟读兵书却不会应变，长平之战被白起坑杀四十万赵卒。比喻空谈理论不能解决实际问题。'},
+       {name:'图穷匕见',tag:'正史',type:'politics',era:'荆轲·前227年',desc:'荆轲献燕督亢地图于秦王，图穷而匕首见，刺杀未遂。是战国末年最著名的刺秦事件。'},
+       {name:'商鞅变法',tag:'正史',type:'politics',era:'秦孝公·前356年',desc:'秦孝公任用商鞅，废井田开阡陌、奖励耕战、行郡县、连坐之法。秦国由此从西陲弱国一跃成为战国最强，为秦始皇统一奠定制度基础。'},
+       {name:'百家争鸣',tag:'正史',type:'culture',era:'战国·前475—前221年',desc:'战国时期儒、墨、道、法、名、兵、阴阳等诸子百家并行，著书讲学、互相辩难。是中国思想史上最自由活跃的时期，后世思想流派几乎都可追溯至此。'}
+     ],books:[{name:'春秋',author:'孔子修订',period:'春秋末期',life:'孔子（前551—前479）修订',desc:'中国第一部编年体史书，鲁国历史，微言大义。'},{name:'左传',author:'左丘明',period:'战国初期',life:'约前502—前422',desc:'《春秋》三传之一，先秦叙事散文巅峰。'},{name:'论语',author:'孔子弟子及再传弟子',period:'战国初期',life:'前551—前479',desc:'记录孔子言行，儒家核心经典，四书之一。'},{name:'道德经',author:'老子',period:'春秋末期',life:'约前571—前471',desc:'道家开山之作，仅五千言，影响中国哲学与宗教。'},{name:'孙子兵法',author:'孙武',period:'春秋末期',life:'约前545—前470',desc:'世界最早兵书，十三篇，至今为各国军校教材。'},{name:'孟子',author:'孟子及其弟子',period:'战国中期',life:'约前372—前289',desc:'儒家四书之一，性善论与仁政思想。'},{name:'庄子',author:'庄周',period:'战国中期',life:'约前369—前286',desc:'道家代表作，寓言汪洋恣肆，文学与哲学双绝。'},{name:'韩非子',author:'韩非',period:'战国末期',life:'约前280—前233',desc:'法家集大成之作，秦制理论基础。'},{name:'楚辞',author:'屈原、宋玉等',period:'战国末期',life:'屈原（约前340—前278）、宋玉等',desc:'中国浪漫主义诗歌源头，《离骚》为代表作。'}]},
+
+    {n:'秦',s:-221,e:-207,c:'#C0504D',cap:'咸阳',years:'14年',
+     meta:'中国第一个中央集权大一统王朝，制度影响后世两千年。',
+     rulers:[
+       {name:'秦始皇（嬴政）',reign:'公元前221—前210年（在位12年）',deeds:'灭六国首统天下，创"皇帝"称号；废分封行郡县；书同文、车同轨、统一度量衡；修长城；焚书。'},
+       {name:'秦二世（胡亥）',reign:'公元前210—前207年（在位3年）',deeds:'赵高弄权，"指鹿为马"；陈胜吴广大泽乡起义，天下响应。'},
+       {name:'子婴',reign:'公元前207年（在位46天）',deeds:'杀赵高；刘邦入咸阳，子婴投降，秦亡。'}
+     ],
+     stories:[
+       {name:'指鹿为马',tag:'正史',type:'politics',era:'赵高/秦二世·前207年',desc:'赵高献鹿于二世，曰"马"。问群臣，沉默或说是马者多，说是鹿者被赵高暗中陷害。比喻故意颠倒黑白。'},
+       {name:'焚书坑儒',tag:'正史',type:'culture',era:'秦始皇·前213年',desc:'秦始皇采纳李斯建议焚民间诗书，后坑杀非议朝政的方士儒生四百余人。是中国文化史上第一次大规模思想整顿。'},
+       {name:'破釜沉舟',tag:'正史',type:'military',era:'项羽·前207年',desc:'项羽救赵，渡河后砸沉船、烧饭锅，只带三日粮，以示必死之心，遂大破秦军于巨鹿。'}
+     ],books:[{name:'吕氏春秋',author:'吕不韦门客集体编撰',period:'战国末期',life:'吕不韦（？—前235）集门客',desc:'杂家代表作，兼取儒墨道法，保存大量先秦史料。'}]},
+
+    {n:'西汉',s:-202,e:8,c:'#B5485B',cap:'长安（今西安）',years:'210年',
+     meta:'休养生息后走向鼎盛，丝绸之路开通，儒家思想成为正统。',
+     rulers:[
+       {name:'汉高祖（刘邦）',reign:'公元前202—前195年（在位8年）',deeds:'泗水亭长起兵；楚汉相争，垓下围项羽；建汉；白马之盟"非刘氏不王"。'},
+       {name:'汉惠帝、吕后（共两代，吕后称制）',reign:'公元前194—前180年（约15年）',deeds:'惠帝仁弱，吕后临朝称制，封诸吕为王。'},
+       {name:'汉文帝、汉景帝（共两代）',reign:'公元前179—前141年（约39年）',deeds:'轻徭薄赋，"文景之治"；缇萦救父，废肉刑；平定七国之乱。'},
+       {name:'汉武帝（刘彻）',reign:'公元前140—前87年（在位54年）',deeds:'罢黜百家独尊儒术；张骞通西域；卫青霍去病击匈奴；司马迁著《史记》；晚年下轮台罪己诏。'},
+       {name:'汉昭帝、汉宣帝（共两代）',reign:'公元前86—前49年（约38年）',deeds:'霍光辅政，"昭宣中兴"，西汉最后盛世。'},
+       {name:'汉元帝、成帝、哀帝、平帝、孺子婴（共五代）',reign:'公元前48—公元8年（约56年）',deeds:'外戚王氏专权；王昭君出塞；王莽渐掌大权。',note:'末五帝，王莽篡汉。'}
+     ],
+     stories:[
+       {name:'四面楚歌',tag:'正史',type:'military',era:'项羽·前202年',desc:'项羽被围垓下，夜闻汉军四面皆唱楚歌，以为楚地尽失，军心崩溃。后比喻陷入四面受敌的孤立境地。'},
+       {name:'约法三章',tag:'正史',type:'politics',era:'刘邦·前206年',desc:'刘邦入咸阳，与父老约法三章：杀人者死，伤人及盗抵罪。废除秦苛法，深得民心。'},
+       {name:'成也萧何败也萧何',tag:'正史',type:'idiom',era:'萧何/韩信·前196年',desc:'萧何月下追韩信荐为大将；后又与吕后定计杀韩信于长乐钟室。比喻事情的成败都由同一个人造成。'},
+       {name:'金屋藏娇',tag:'正史',type:'idiom',era:'汉武帝·前153年',desc:'汉武帝幼时说若得阿娇为妇，当造金屋贮之。后娶陈阿娇为皇后。今多作纳妾戏称。'},
+       {name:'苏武牧羊',tag:'正史',type:'politics',era:'苏武·前100年',desc:'苏武出使匈奴被扣十九年，在北海（今贝加尔湖）持汉节牧羊，节旄尽落仍不屈。是民族气节的象征。'},
+       {name:'桃李不言下自成蹊',tag:'正史',type:'culture',era:'司马迁评李广·前1世纪',desc:'司马迁评李广："桃李不言，下自成蹊。"比喻为人真诚自能感召他人。'},
+       {name:'推恩令',tag:'正史',type:'politics',era:'汉武帝·前127年',desc:'汉武帝采纳主父偃建议，令诸侯王除嫡长子外，其余子弟也可分割封地为侯国。表面是施恩，实则使大国自动拆成小国，不费一兵一卒解决了汉初诸侯威胁中央的问题。'},
+       {name:'独尊儒术',tag:'正史',type:'culture',era:'汉武帝·前134年',desc:'汉武帝采纳董仲舒建议，罢黜百家、设五经博士、办太学。儒学自此成为官方意识形态，影响中国两千年的选官、教育与政治伦理。'},
+       {name:'盐铁专营',tag:'正史',type:'econ',era:'汉武帝·前119年',desc:'汉武帝将盐、铁收归官营，设盐官铁官垄断生产销售，为对匈奴战争筹集军费。是中国历史上第一次大规模国家垄断经济，后世盐、茶专卖制度的源头。'},
+       {name:'刺史制度',tag:'正史',type:'politics',era:'汉武帝·前106年',desc:'汉武帝将全国分为十三州，派刺史巡察地方郡守与豪强。刺史品级低但可直达皇帝，是中国最早的系统监察制度，后逐渐演变为州牧、地方最高行政长官。'}
+     ],books:[{name:'史记',author:'司马迁',period:'西汉武帝时',life:'前145—约前87',desc:'中国第一部纪传体通史，130篇，被鲁迅誉为「史家之绝唱，无韵之离骚」。'},{name:'淮南子',author:'刘安集门客',period:'西汉文帝时',life:'刘安（前179—前122）集门客',desc:'杂家代表作，保存大量上古神话与哲学思想。'},{name:'战国策',author:'刘向编订',period:'西汉成帝时',life:'刘向（约前77—前6）编订',desc:'战国纵横家言论汇编，文学性极强。'}]},
+
+    {n:'新',s:9,e:23,c:'#9AA0A6',cap:'常安（长安）',years:'15年',
+     meta:'外戚王莽篡汉建立的短暂王朝。',
+     rulers:[
+       {name:'王莽',reign:'公元9—23年（在位15年）',deeds:'托古改制：土地国有、禁买卖奴婢、改革币制；因脱离现实激化矛盾，绿林赤眉起义；昆阳之战主力覆灭，王莽被杀。'}
+     ],
+     stories:[
+       {name:'王莽改制',tag:'正史',type:'politics',era:'王莽·9—23年',desc:'王莽依《周礼》改革：王田制（土地国有）、五均六筦、币制四改。因脱离实际、朝令夕改，农商失业，天下大乱。'},
+       {name:'绿林赤眉起义',tag:'正史',type:'military',era:'新朝末·17—25年',desc:'天凤年间荆州绿林军、琅琊樊崇赤眉军相继起事，最终绿林军攻入长安杀王莽。是西汉末最大规模农民起义。'}
+     ]},
+
+    {n:'东汉',s:25,e:220,c:'#A03E4F',cap:'洛阳',years:'195年',
+     meta:'刘秀重建汉室；佛教传入、造纸术改进；末年群雄割据。',
+     rulers:[
+       {name:'光武帝（刘秀）',reign:'公元25—57年（在位33年）',deeds:'昆阳之战大败王莽；建东汉；退功臣进文吏，云台二十八将。'},
+       {name:'汉明帝、汉章帝（共两代）',reign:'公元58—88年（约31年）',deeds:'明章之治；遣使求佛法，建白马寺；班超经营西域。'},
+       {name:'汉和帝、殇帝、安帝、顺帝、冲帝、质帝（共六代）',reign:'公元89—146年（约58年）',deeds:'外戚宦官交替专权；蔡伦（宦官）改进造纸术。',note:'中期六帝，蔡伦为重要人物。'},
+       {name:'汉桓帝、汉灵帝（共两代）',reign:'公元147—189年（约43年）',deeds:'党锢之祸；公元184年张角黄巾起义；董卓进京乱政。'},
+       {name:'汉献帝（刘协）',reign:'公元189—220年（在位31年）',deeds:'先为董卓傀儡，后被曹操"挟天子以令诸侯"；公元220年禅位于曹丕，东汉亡。'}
+     ],
+     stories:[
+       {name:'投笔从戎',tag:'正史',type:'idiom',era:'班超·73年',desc:'班超家贫抄书为生，掷笔叹"大丈夫无他志略，犹当效傅介子、张骞立功异域"。后出使西域三十一年，封定远侯。'},
+       {name:'不入虎穴焉得虎子',tag:'正史',type:'military',era:'班超·73年',desc:'班超出使鄯善，察觉匈奴使者也在，率三十六人夜袭匈奴营，说"不入虎穴不得虎子"。是勇敢果决的经典。'},
+       {name:'蔡伦造纸',tag:'正史',type:'culture',era:'蔡伦·105年',desc:'蔡伦总结前人经验，用树皮、麻头、破布造纸，公元105年奏报朝廷。纸的普及深刻改变了人类文明传播方式。'},
+       {name:'挟天子以令诸侯',tag:'正史',type:'politics',era:'曹操/荀彧·196年',desc:'曹操采纳荀彧建议迎献帝都许，以朝廷名义发号施令，在政治上占得先机。是曹魏代汉的基础策略。'},
+       {name:'尚书台',tag:'正史',type:'politics',era:'光武帝·25—57年',desc:'光武帝刘秀削弱三公权力，将实权并入皇帝身边的尚书台。此后虽置三公、事归台阁，开启了内朝压制外朝的政治传统，后世三省六部制由此演变。'},
+       {name:'党锢之祸',tag:'正史',type:'politics',era:'东汉末·166—184年',desc:'东汉后期士大夫、太学生联合反对宦官专权，被宦官两次以党人罪名禁锢终身、牵连亲友。是中国历史上第一次大规模知识分子与皇权对抗事件。'}
+     ],books:[{name:'汉书',author:'班固',period:'东汉章帝时',life:'32—92',desc:'中国第一部纪传体断代史，专记西汉一朝。'},{name:'说文解字',author:'许慎',period:'东汉和帝时',life:'约58—约147',desc:'中国第一部字典，9353字，研究甲骨文金文的桥梁。'},{name:'九章算术',author:'西汉—东汉多人',period:'东汉前期',life:'多人整理，作者不详',desc:'中国古代数学经典，最早记载负数与方程组解法。'},{name:'伤寒杂病论',author:'张仲景',period:'东汉末年',life:'约150—219',desc:'中医临床奠基之作，被后世医家奉为圭臬。'},{name:'论衡',author:'王充',period:'东汉前期',life:'27—约97',desc:'唯物主义哲学著作，批判谶纬迷信。'}]},
+
+    {n:'三国',s:220,e:280,c:'#9EACEA',cap:'魏洛阳/蜀成都/吴建业',years:'60年',
+     meta:'魏蜀吴三分天下，后世小说戏曲取材最富。',
+     rulers:[
+       {name:'魏文帝（曹丕）',reign:'公元220—226年（在位7年）',deeds:'代汉称帝；九品中正制；三曹文学。'},
+       {name:'魏明帝→齐王芳→高贵乡公→元帝奂（共四代）',reign:'公元227—265年（约39年）',deeds:'司马懿、司马师、司马昭渐专权；公元263年魏灭蜀。',note:'魏后四帝。'},
+       {name:'蜀汉昭烈帝（刘备）',reign:'公元221—223年（在位3年）',deeds:'三顾茅庐请诸葛亮；夷陵之战败于东吴，白帝城托孤。'},
+       {name:'蜀汉后主（刘禅）',reign:'公元223—263年（在位41年）',deeds:'诸葛亮（丞相）辅政，六出祁山；诸葛亮死后黄皓专权；魏灭蜀，"乐不思蜀"。'},
+       {name:'吴大帝（孙权）',reign:'公元229—252年（在位24年）',deeds:'联刘抗曹赢赤壁之战；派卫温到夷洲（台湾）。'},
+       {name:'吴会稽王、景帝、归命侯皓（共三代）',reign:'公元252—280年（约29年）',deeds:'孙皓暴政；公元280年晋灭吴，三国归晋。',note:'吴后三主。'}
+     ],
+     stories:[
+       {name:'三顾茅庐',tag:'正史',type:'politics',era:'刘备/诸葛亮·207年',desc:'刘备三次亲访诸葛亮于隆中，问以统一天下大计。诸葛亮遂出山。《出师表》"三顾臣于草庐之中"即指此事。'},
+       {name:'望梅止渴',tag:'正史',type:'idiom',era:'曹操·约200年',desc:'曹操行军失水，士兵渴疲。操传令"前有大梅林，饶子甘酸可以解渴"。士卒闻之口皆出水，乘此得及前源。'},
+       {name:'乐不思蜀',tag:'正史',type:'idiom',era:'刘禅·263年',desc:'刘禅降魏后被封安乐公，司马昭问"颇思蜀否？"答"此间乐，不思蜀"。后比喻乐而忘本。'},
+       {name:'桃园三结义',tag:'演义',type:'idiom',era:'演义虚构',desc:'刘备、关羽、张飞在桃园结为兄弟，誓言共扶汉室。正史只载三人"恩若兄弟"，结义细节出自《三国演义》。'},
+       {name:'空城计',tag:'演义',type:'military',era:'演义虚构',desc:'马谡失街亭后，诸葛亮大开城门抚琴，司马懿疑有伏兵退兵。正史无载，是《三国演义》的经典虚构。'},
+       {name:'草船借箭',tag:'演义',type:'military',era:'演义虚构',desc:'诸葛亮利用大雾以草船受曹操箭十万余支。正史中此乃孙权故事，被小说移植到诸葛亮身上。'}
+     ],books:[{name:'典论·论文',author:'曹丕',period:'三国魏文帝时',life:'187—226',desc:'中国第一部文学批评专论。'}]},
+
+    {n:'西晋',s:266,e:316,c:'#8FA8D8',cap:'洛阳',years:'50年',
+     meta:'短暂统一后迅速陷入内乱与外族入侵。',
+     rulers:[
+       {name:'晋武帝（司马炎）',reign:'公元266—290年（在位25年）',deeds:'代魏建晋，公元280年灭吴统一；太康之治；大封宗室。'},
+       {name:'晋惠帝（司马衷）',reign:'公元290—306年（在位17年）',deeds:'"何不食肉糜"；贾后专权，引发八王之乱十六年。'},
+       {name:'晋怀帝、晋愍帝（共两代）',reign:'公元307—316年（约10年）',deeds:'永嘉之乱，匈奴刘聪破洛阳、长安，西晋亡。',note:'末二帝。'}
+     ],
+     stories:[
+       {name:'何不食肉糜',tag:'正史',type:'idiom',era:'晋惠帝·约290年',desc:'晋惠帝闻百姓饿死，问"何不食肉糜？"是昏君的典型。'},
+       {name:'洛阳纸贵',tag:'正史',type:'culture',era:'左思·约280年',desc:'左思作《三都赋》，豪贵竞相传抄，洛阳纸价上涨。比喻著作风行一时。'},
+       {name:'闻鸡起舞',tag:'正史',type:'idiom',era:'祖逖/刘琨·约310年',desc:'祖逖与刘琨共被同寝，闻鸡鸣即起舞剑。后祖逖北伐收复黄河以南。比喻有志之士及时奋发。'}
+     ],books:[{name:'三国志',author:'陈寿',period:'西晋武帝时',life:'233—297',desc:'与《史记》《汉书》《后汉书》合称前四史。'}]},
+
+    {n:'东晋十六国',s:317,e:420,c:'#9EACEA',cap:'建康（今南京）',years:'东晋103年',
+     meta:'司马氏南渡偏安，北方五胡十六国混战。',
+     rulers:[
+       {name:'晋元帝（司马睿）',reign:'公元317—323年（在位7年）',deeds:'在王氏扶持下于建康称帝，"王与马共天下"。'},
+       {name:'明帝、成帝、康帝、穆帝（共四代）',reign:'公元323—361年（约39年）',deeds:'祖逖（名将）北伐；桓温专权。',note:'中期四帝。'},
+       {name:'哀帝、废帝、简文帝（共三代）',reign:'公元362—372年（约11年）',deeds:'桓温废帝，渐有篡位之心。',note:'三帝。'},
+       {name:'晋孝武帝（司马曜）',reign:'公元373—396年（在位24年）',deeds:'公元383年淝水之战，谢安（宰相）以八万北府兵败前秦苻坚。'},
+       {name:'晋安帝、恭帝（共两代）',reign:'公元397—420年（约24年）',deeds:'刘裕北伐建功，渐掌大权；公元420年恭帝禅位，东晋亡。',note:'末二帝。'}
+     ],
+     stories:[
+       {name:'淝水之战',tag:'正史',type:'military',era:'谢安/苻坚·383年',desc:'公元383年，前秦苻坚率八十七万南下，谢安以八万北府兵迎战，秦兵大败，风声鹤唳草木皆兵。是中国史上以少胜多的著名战役。'},
+       {name:'草木皆兵',tag:'正史',type:'idiom',era:'苻坚·383年',desc:'苻坚登城望晋军阵容严整，误把八公山上草木都当作晋兵。形容惊慌时疑神疑鬼。'},
+       {name:'东山再起',tag:'正史',type:'idiom',era:'谢安·383年',desc:'谢安隐居东山多年，四十余岁始出仕，后指挥淝水之战立下大功。比喻退隐后再度出任要职。'}
+     ],books:[{name:'抱朴子',author:'葛洪',period:'东晋初年',life:'283—363',desc:'道教炼丹术与神仙理论经典。'},{name:'兰亭集序',author:'王羲之',period:'东晋穆帝时',life:'303—361',desc:'天下第一行书，东晋书法巅峰。'},{name:'文赋',author:'陆机',period:'西晋惠帝时',life:'261—303',desc:'中国系统文学批评理论开山之作。'}]},
+
+    {n:'南北朝',s:420,e:589,c:'#8FA8D8',cap:'南朝建康/北朝平城·洛阳',years:'169年',
+     meta:'南北对峙，佛教兴盛，民族大融合。',
+     rulers:[
+       {name:'宋武帝（刘裕）',reign:'公元420—422年（在位3年）',deeds:'代晋建宋；北伐灭南燕、后秦，"金戈铁马气吞万里如虎"。'},
+       {name:'宋、齐、梁、陈（南朝四代共二十四帝）',reign:'公元422—589年（约168年）',deeds:'四代更迭；梁武帝四次舍身同泰寺；侯景之乱后南朝衰落。',note:'南朝整体并列。'},
+       {name:'北魏道武帝、太武帝（共两代）',reign:'公元386—452年（约67年）',deeds:'统一北方；从平城崛起。',note:'北朝前期。'},
+       {name:'北魏孝文帝（拓跋宏）',reign:'公元471—499年（在位29年）',deeds:'迁都洛阳；强制汉化：穿汉服、说汉语、改汉姓、与汉人通婚。'},
+       {name:'北魏分裂→东魏/西魏→北齐/北周（共五代）',reign:'公元500—581年（约82年）',deeds:'北魏分裂，后北周灭北齐；杨坚代周建隋。',note:'北朝后期。'}
+     ],
+     stories:[
+       {name:'木兰从军',tag:'古史传说',type:'culture',era:'北朝·约400年',desc:'《木兰辞》叙述木兰女扮男装代父从军。历史上是否有木兰其人有争议，可能是北朝游牧社会女子从军的艺术化。'},
+       {name:'云冈龙门石窟',tag:'正史',type:'culture',era:'北魏·460—520年',desc:'北魏孝文帝迁都前后开凿云冈（大同）、龙门（洛阳）石窟，是世界佛教艺术瑰宝。'},
+       {name:'侯景之乱',tag:'正史',type:'military',era:'梁武帝·548—552年',desc:'东魏降将侯景叛梁，围攻建康一百三十余日，梁武帝饿死台城。江南经济文化遭毁灭性打击。'}
+     ],books:[{name:'后汉书',author:'范晔',period:'南朝宋文帝时',life:'398—445',desc:'前四史之一，专记东汉史。'},{name:'文心雕龙',author:'刘勰',period:'南朝齐梁之际',life:'约465—约522',desc:'中国第一部系统文学理论巨著，体大虑周。'},{name:'诗品',author:'钟嵘',period:'南朝梁武帝时',life:'约468—约518',desc:'中国第一部诗歌批评专著。'},{name:'水经注',author:'郦道元',period:'北魏孝明帝时',life:'？—527',desc:'古代地理学名著，文笔优美。'},{name:'齐民要术',author:'贾思勰',period:'北魏东魏时',life:'约480—550',desc:'中国现存最早最完整农书。'}]},
+
+    {n:'隋',s:581,e:618,c:'#7FB5D5',cap:'大兴（长安）/洛阳',years:'38年',
+     meta:'结束三百年分裂重归统一，创立科举与大运河。',
+     rulers:[
+       {name:'隋文帝（杨坚）',reign:'公元581—604年（在位24年）',deeds:'代周建隋，公元589年灭陈统一；开创科举；开皇之治府库充盈。'},
+       {name:'隋炀帝（杨广）',reign:'公元604—618年（在位14年）',deeds:'开凿大运河；建东都洛阳；三征高句丽；巡游江都，被宇文化及缢死。'}
+     ],
+     stories:[
+       {name:'开皇之治',tag:'正史',type:'econ',era:'隋文帝·581—604年',desc:'隋文帝统一后轻徭薄赋、整顿户籍，户口从四百万增至八百九十万，府库积粮可供五六十年。'},
+       {name:'大运河',tag:'正史',type:'econ',era:'隋炀帝·605—610年',desc:'隋炀帝开凿以洛阳为中心、北抵涿郡、南达余杭的运河，全长两千七百公里。沟通南北，唐代以后成为经济命脉。'},
+       {name:'破镜重圆',tag:'正史',type:'idiom',era:'南朝陈末·约589年',desc:'南朝陈乐昌公主与夫徐德言破镜各执一半，约正月十五卖镜于市。陈亡后夫妻果以此镜重逢。比喻夫妻离散后团聚。'},
+       {name:'科举制',tag:'正史',type:'politics',era:'隋文帝/炀帝·587—605年',desc:'隋文帝废九品中正制，开始用考试选官；隋炀帝设进士科。此后一千三百年，科举成为中国选官制度的核心，直到1905年清末才废除。是世界最早的文官考试制度。'}
+     ],books:[{name:'切韵',author:'陆法言',period:'隋文帝时',life:'生卒年不详',desc:'中国第一部系统韵书，唐宋韵书基础。'}]},
+
+    {n:'唐',s:618,e:907,c:'#5BA88A',cap:'长安（武周时都洛阳）',years:'289年',
+     meta:'中国古代最强盛王朝之一，对东亚影响深远。',
+     rulers:[
+       {name:'唐高祖（李渊）',reign:'公元618—626年（在位9年）',deeds:'太原起兵建唐。'},
+       {name:'唐太宗（李世民）',reign:'公元626—649年（在位23年）',deeds:'玄武门之变继位；贞观之治；被尊"天可汗"。'},
+       {name:'唐高宗、中宗、睿宗（共三代）',reign:'公元649—690年（约42年）',deeds:'永徽之治；武则天渐掌大权。',note:'三帝。'},
+       {name:'武则天（武周皇帝）',reign:'公元690—705年（在位15年）',deeds:'中国唯一正统女皇帝；开创殿试武举；立无字碑。'},
+       {name:'中宗、睿宗复辟（共两代）',reign:'公元705—712年（约8年）',deeds:'韦后、太平公主乱政。',note:'复辟两帝。'},
+       {name:'唐玄宗（李隆基）',reign:'公元712—756年（在位45年）',deeds:'前期开元盛世；后期宠杨贵妃，用李林甫杨国忠；公元755年安史之乱爆发，马嵬坡兵变。'},
+       {name:'肃宗、代宗、德宗、顺宗、宪宗（共五代）',reign:'公元756—820年（约65年）',deeds:'平定安史之乱；藩镇割据；元和中兴。',note:'中唐五帝。'},
+       {name:'穆宗→敬宗→文宗→武宗→宣宗→懿宗→僖宗→昭宗→哀帝（共九代）',reign:'公元820—907年（约88年）',deeds:'牛李党争；宦官专权；黄巢起义；公元907年朱温篡唐。',note:'晚唐九帝。'}
+     ],
+     stories:[
+       {name:'贞观之治',tag:'正史',type:'politics',era:'唐太宗·626—649年',desc:'唐太宗以隋亡为鉴，任魏徵、房玄龄等，轻徭薄赋、纳谏任贤，史称"贞观之治"。是中国封建社会的标杆时代。'},
+       {name:'请君入瓮',tag:'正史',type:'politics',era:'武则天·690年',desc:'武则天时酷吏来俊臣审问周兴，问"犯人不招怎么办？"周兴曰"烧大瓮令犯人入内"。来俊臣即依言烧瓮，曰"请君入瓮"。比喻以其人之道还治其人之身。'},
+       {name:'桃李满天下',tag:'正史',type:'culture',era:'狄仁杰·约700年',desc:'狄仁杰荐张柬之、桓彦范等数十人，皆为名臣。人谓"天下桃李，悉在公门"。比喻培养的学生众多。'},
+       {name:'开元盛世',tag:'正史',type:'econ',era:'唐玄宗·713—741年',desc:'唐玄宗前期励精图治，户口达八百九十万户，长安是国际大都会。杜甫忆"忆昔开元全盛日，小邑犹藏万家室"。'},
+       {name:'安史之乱',tag:'正史',type:'military',era:'安禄山·755—763年',desc:'公元755年安禄山、史思明起兵，历时八年。是唐朝由盛转衰的转折点，藩镇割据自此形成。'},
+       {name:'环肥燕瘦',tag:'正史',type:'culture',era:'唐/汉·后世成语',desc:'唐玄宗贵妃杨玉环丰腴，汉成帝皇后赵飞燕轻盈。后世喻女子体态不同而各擅其美，也比喻艺术风格各有所长。'},
+       {name:'三省六部制',tag:'正史',type:'politics',era:'唐初·618年起',desc:'唐中央设中书省（决策）、门下省（审核）、尚书省（执行），尚书省下统吏、户、礼、兵、刑、工六部。这套分工明确的中央官制一直沿用到清末，是中国官僚制度成熟的标志。'},
+       {name:'两税法',tag:'正史',type:'econ',era:'杨炎·780年',desc:'唐德宗时杨炎主持改革，废除租庸调和一切杂税，按土地资产分夏秋两季征税。从按人收税转向按地收税，是中国税制史上从税人到税地的转折点。'},
+       {name:'节度使制度',tag:'正史',type:'politics',era:'唐初—755年',desc:'唐初在边境设节度使，掌一区军、民、财大权。起初为防边，后因府兵制崩溃，节度使拥兵自重，最终酿成安史之乱和唐末藩镇割据。'}
+     ],books:[{name:'千金方',author:'孙思邈',period:'唐高宗时',life:'581—682',desc:'中医百科全书，被尊为「药王」。'},{name:'唐律疏议',author:'长孙无忌等',period:'唐高宗时',life:'长孙无忌（？—659）等',desc:'中国现存最完整、最系统的古代法典，影响东亚律法。'},{name:'史通',author:'刘知几',period:'唐中宗时',life:'661—721',desc:'中国第一部史学理论专著。'},{name:'茶经',author:'陆羽',period:'唐德宗时',life:'733—804',desc:'世界第一部茶叶专著，茶文化经典。'},{name:'李白、杜甫诗集',author:'李白、杜甫',period:'盛唐—中唐',life:'701—762）、杜甫（712—770',desc:'唐诗巅峰，李白浪漫、杜甫写实，并称李杜。'}]},
+
+    {n:'五代十国',s:907,e:960,c:'#9EACEA',cap:'中原：开封·洛阳',years:'53年',
+     meta:'唐亡后中原相继五个短命朝代，南方并立十国。',
+     rulers:[
+       {name:'后梁太祖（朱温）',reign:'公元907—912年（在位6年）',deeds:'原黄巢部将，降唐后篡唐建后梁。'},
+       {name:'后唐庄宗（李存勖）',reign:'公元923—926年（在位4年）',deeds:'灭后梁；伶人乱政。'},
+       {name:'后晋高祖（石敬瑭）',reign:'公元936—942年（在位7年）',deeds:'割燕云十六州给契丹，自称"儿皇帝"。'},
+       {name:'后汉、后周（共五代）',reign:'公元947—960年（约14年）',deeds:'后汉仅四年而亡；后周太祖郭威、世宗柴荣励精图治。',note:'中原最后两个朝代。'},
+       {name:'南唐后主（李煜）',reign:'公元961—975年（在位15年）',deeds:'十国代表；治国无能却为"千古词帝"。'}
+     ],
+     stories:[
+       {name:'儿皇帝',tag:'正史',type:'politics',era:'石敬瑭·936年',desc:'石敬瑭为求契丹 support，割燕云十六州，年称"儿皇帝"，比耶律德光小十岁却称父。是后世屈辱外交的代名词。'},
+       {name:'千古词帝李煜',tag:'正史',type:'culture',era:'李煜·961—978年',desc:'李煜治国无能，但词艺极高，"问君能有几多愁，恰似一江春水向东流""流水落花春去也，天上人间"。降宋后被宋太宗毒死。'},
+       {name:'黄袍加身',tag:'正史',type:'politics',era:'赵匡胤·960年',desc:'后周大将赵匡胤在陈桥驿被部下黄袍加身，回师开封建宋。是和平篡位的经典案例。'}
+     ]},
+
+    {n:'北宋',s:960,e:1127,c:'#8BC8EA',cap:'东京（今开封）',years:'167年',
+     meta:'重文抑武、经济文化繁荣，与辽、西夏并立。',
+     rulers:[
+       {name:'宋太祖（赵匡胤）',reign:'公元960—976年（在位17年）',deeds:'陈桥兵变建宋；杯酒释兵权。'},
+       {name:'宋太宗（赵光义）',reign:'公元976—997年（在位22年）',deeds:'灭北汉基本统一；烛影斧声之谜。'},
+       {name:'宋真宗',reign:'公元997—1022年（在位26年）',deeds:'澶渊之盟，与辽百年和平。'},
+       {name:'宋仁宗（赵祯）',reign:'公元1022—1063年（在位42年）',deeds:'庆历新政（范仲淹）；包拯、欧阳修同期；"仁宗盛治"。'},
+       {name:'宋英宗（赵曙）',reign:'公元1063—1067年（在位4年）',deeds:'在位短，延续仁宗政策。'},
+       {name:'宋神宗（赵顼）',reign:'公元1067—1085年（在位19年）',deeds:'任用王安石推行熙宁变法；元丰改制。'},
+       {name:'宋哲宗、徽宗、钦宗（共三代）',reign:'公元1085—1127年（约43年）',deeds:'徽宗创瘦金体；公元1127年靖康之耻，二帝被金兵掳走，北宋亡。'}
+     ],
+     stories:[
+       {name:'杯酒释兵权',tag:'正史',type:'politics',era:'宋太祖·961年',desc:'赵匡胤宴饮时暗示石守信等将领交出兵权，多积金田宅以终天年。是"温和夺权"的经典，奠定了宋朝重文抑武国策。'},
+       {name:'澶渊之盟',tag:'正史',type:'politics',era:'宋真宗·1005年',desc:'宋真宗与辽在澶州订盟：宋每年给辽银十万两、绢二十万匹，约为兄弟之国。此后宋辽百年无大战。'},
+       {name:'王安石变法',tag:'正史',type:'politics',era:'宋神宗/王安石·1069年',desc:'宋神宗时王安石推行青苗、募役、市易等新法，意图富国强兵。因司马光等反对，新旧党争持续数十年。'},
+       {name:'东窗事发',tag:'正史',type:'idiom',era:'秦桧·1142年',desc:'秦桧与妻王氏在东窗下密谋害岳飞。后秦桧游西湖病死，方士传说其在阴府受审，秦桧曰"可呼夫人，传语东窗事发矣"。比喻阴谋败露。'},
+       {name:'莫须有',tag:'正史',type:'politics',era:'秦桧·1142年',desc:'韩世忠问岳飞何罪，秦桧曰"莫须有"（也许有）。世忠曰"莫须有三字何以服天下？"指凭空诬陷。'},
+       {name:'开卷有益',tag:'正史',type:'culture',era:'宋太宗·976—997年',desc:'宋太宗日读《太平御览》三卷，曰"开卷有益，朕不以为劳也"。形容读书总有好处。'},
+       {name:'重文抑武国策',tag:'正史',type:'politics',era:'宋初·960—997年',desc:'宋太祖、太宗总结唐末五代藩镇割据教训，通过杯酒释兵权、派文臣知州、设转运使收地方财权、更戍法使兵将分离等手段，彻底根除了武将篡位的可能。代价是宋朝军事长期积弱。'}
+     ],books:[{name:'资治通鉴',author:'司马光',period:'北宋神宗时',life:'1019—1086',desc:'中国最大编年体通史，294卷，记1362年历史。'},{name:'梦溪笔谈',author:'沈括',period:'北宋神宗时',life:'1031—1095',desc:'中国科学史上的坐标，涉及数学、物理、天文、地质。'},{name:'太平御览',author:'李昉等编',period:'北宋太宗时',life:'李昉（925—996）等编',desc:'宋代四大类书之一，保存大量已佚古籍。'}]},
+
+    {n:'南宋',s:1127,e:1279,c:'#7AB8D8',cap:'临安（今杭州）',years:'152年',
+     meta:'偏安江南，与金、蒙古相继对峙。',
+     rulers:[
+       {name:'宋高宗（赵构）',reign:'公元1127—1162年（在位36年）',deeds:'南渡重建宋室；偏安临安；杀岳飞（名将）。'},
+       {name:'宋孝宗（赵昚）',reign:'公元1162—1189年（在位28年）',deeds:'为岳飞平反；隆兴北伐；乾淳之治。'},
+       {name:'光宗、宁宗、理宗、度宗（共四代）',reign:'公元1189—1274年（约86年）',deeds:'韩侂胄、史弥远专权；联蒙灭金后蒙古南下。',note:'中四帝。'},
+       {name:'恭帝、端宗、帝昺（共三代）',reign:'公元1274—1279年（约6年）',deeds:'崖山海战；陆秀夫（大臣）负幼帝投海，南宋亡。',note:'末三帝。'}
+     ],
+     stories:[
+       {name:'精忠报国',tag:'正史',type:'politics',era:'岳飞·约1122年',desc:'岳飞背上刺"尽忠报国"四字（后世传为"精忠"）。他率岳家军北伐，屡破金兵，却被高宗、秦桧以"莫须有"罪名杀害。'},
+       {name:'东窗事发',tag:'正史',desc:'秦桧与妻王氏在东窗下密谋害岳飞。比喻阴谋败露。'},
+       {name:'崖山海战',tag:'正史',type:'military',era:'陆秀夫·1279年',desc:'公元1279年，元军围南宋残部于崖山。陆秀夫背幼帝赵昺投海殉国，随行十万军民亦殉国。是中国古典王朝的悲壮终章。'}
+     ],books:[{name:'四书章句集注',author:'朱熹',period:'南宋孝宗时',life:'1130—1200',desc:'朱熹集《大学》《中庸》《论语》《孟子》作注，此后七百年为科举标准。'},{name:'稼轩长短句',author:'辛弃疾',period:'南宋孝宗—宁宗时',life:'1140—1207',desc:'宋词豪放派代表，存词600余首。'},{name:'剑南诗稿',author:'陆游',period:'南宋孝宗—宁宗时',life:'1125—1210',desc:'存诗9300余首，为南宋最多产诗人。'}]},
+
+    {n:'元',s:1271,e:1368,c:'#6BA3C9',cap:'大都（今北京）',years:'97年',
+     meta:'蒙古族建立，疆域空前辽阔，创行省制度。',
+     rulers:[
+       {name:'成吉思汗（铁木真，追尊）',reign:'公元1206—1227年（在位22年）',deeds:'统一蒙古各部，建蒙古汗国，横扫欧亚。'},
+       {name:'元世祖（忽必烈）',reign:'公元1271—1294年（在位24年）',deeds:'定国号元；定都大都；公元1279年灭南宋统一；创行省制度。'},
+       {name:'成宗→武宗→仁宗→英宗→泰定帝→明宗→文宗→宁宗（共八代）',reign:'公元1294—1332年（约39年）',deeds:'皇位更迭频繁；元曲鼎盛。',note:'中期八帝。'},
+       {name:'元顺帝（妥懽帖睦尔）',reign:'公元1333—1368年（在位36年）',deeds:'末年政治腐败；红巾军起义；朱元璋北伐，元北逃。'}
+     ],
+     stories:[
+       {name:'行省制度',tag:'正史',type:'politics',era:'忽必烈·1271年起',desc:'忽必烈在中央设中书省，地方设十行中书省，是现代省制的起源。影响至今。'},
+       {name:'马可·波罗来华',tag:'正史',type:'culture',era:'马可·波罗·1275—1292年',desc:'威尼斯人马可·波罗在忽必烈朝任职十七年，归国后口述《马可·波罗行纪》，激起欧洲人对东方的向往。'},
+       {name:'黄道婆',tag:'正史',type:'econ',era:'黄道婆·约1295年',desc:'松江女子黄道婆从海南黎族学得棉纺织技术，回乡推广，使松江成为棉纺织中心。是元代民间技术革新的代表。'}
+     ],books:[{name:'窦娥冤',author:'关汉卿',period:'元世祖时',life:'约1234—约1300',desc:'元杂剧代表作，中国十大悲剧之一。'},{name:'西厢记',author:'王实甫',period:'元成宗时',life:'生卒年不详，约1260—1336',desc:'元杂剧巅峰，「愿普天下有情的都成了眷属」。'}]},
+
+    {n:'明',s:1368,e:1644,c:'#B5485B',cap:'南京→北京（永乐迁都）',years:'276年',
+     meta:'汉族最后一个大一统王朝。',
+     rulers:[
+       {name:'明太祖（朱元璋）',reign:'公元1368—1398年（在位31年）',deeds:'布衣出身，曾为僧；建明；废丞相；胡蓝之狱杀功臣。'},
+       {name:'建文帝（朱允炆）',reign:'公元1398—1402年（在位4年）',deeds:'削藩引发靖难之役；南京城破后下落不明。'},
+       {name:'明成祖（朱棣）',reign:'公元1402—1424年（在位22年）',deeds:'靖难夺位；迁都北京建紫禁城；郑和七下西洋；编《永乐大典》。'},
+       {name:'仁宗、宣宗（共两代）',reign:'公元1424—1435年（约12年）',deeds:'仁宣之治，明朝鼎盛。'},
+       {name:'英宗、代宗（共两代）',reign:'公元1435—1464年（约30年）',deeds:'土木堡之变英宗被瓦剌俘虏；于谦（大臣）守北京；英宗复辟。'},
+       {name:'宪宗、孝宗、武宗、世宗、穆宗（共五代）',reign:'公元1464—1572年（约109年）',deeds:'弘治中兴；王阳明（思想家）龙场悟道；嘉靖崇道。',note:'中五帝。'},
+       {name:'明神宗（万历，朱翊钧）',reign:'公元1572—1620年（在位48年）',deeds:'张居正（首辅）一条鞭法；万历怠政三十年。'},
+       {name:'光宗、熹宗、思宗崇祯（共三代）',reign:'公元1620—1644年（约25年）',deeds:'魏忠贤专权；李自成进京，崇祯自缢煤山。'}
+     ],
+     stories:[
+       {name:'靖难之役',tag:'正史',type:'military',era:'朱棣·1399—1402年',desc:'建文帝削藩，燕王朱棣以"清君侧"为名起兵，四年后攻入南京夺位。是明朝唯一一次皇族内战。'},
+       {name:'郑和下西洋',tag:'正史',type:'military',era:'郑和·1405—1433年',desc:'1405—1433年，郑和率宝船船队七下西洋，最远抵非洲东岸。比哥伦布早近百年，是世界航海史壮举。'},
+       {name:'土木堡之变',tag:'正史',type:'military',era:'明英宗·1449年',desc:'1449年明英宗听信王振亲征瓦剌，在土木堡五十万大军溃败，英宗被俘。是明朝由盛转衰的军事转折点。'},
+       {name:'知行合一',tag:'正史',type:'culture',era:'王阳明·1508年',desc:'王阳明在贵州龙场悟道，提出"致良知""知行合一"。是明代心学的核心，影响东亚思想界五百年。'},
+       {name:'两袖清风',tag:'正史',type:'idiom',era:'于谦·约1430年',desc:'于谦巡抚河南入京，不带礼品。人劝其行贿权贵，谦甩袖曰"清风两袖朝天去"。比喻为官廉洁。'},
+       {name:'罄竹难书',tag:'正史',type:'idiom',era:'李密·617年',desc:'李密讨隋炀帝檄"罄南山之竹，书罪未穷"。比喻罪恶多得写不完。'},
+       {name:'废丞相',tag:'正史',type:'politics',era:'朱元璋·1380年',desc:'明太祖朱元璋借胡惟庸案废除存在一千多年的丞相制度，六部直接对皇帝负责。此后皇帝直辖全国政务，政务压力迫使后来的皇帝设立内阁辅助，皇权由此极度集中。'},
+       {name:'内阁制度',tag:'正史',type:'politics',era:'明成祖后·1402年起',desc:'明成祖后选翰林院入阁协办奏章，内阁大学士逐渐成为实际上的宰相（无宰相之名而行宰相之权）。张居正即万历朝内阁首辅，一条鞭法即其任内推行。'},
+       {name:'锦衣卫与东厂',tag:'正史',type:'politics',era:'明太祖/成祖·1382年起',desc:'明太祖设锦衣卫掌侍卫缉捕，明成祖设宦官机构东厂监察官民。厂卫制度独立于司法之外，可直接逮捕审讯，是明代皇权极端专制的特务统治工具。'}
+     ],books:[{name:'永乐大典',author:'解缙等编',period:'明成祖时',life:'解缙（1369—1415）等编',desc:'世界最大百科全书，22877卷，远早于《大英百科》。'},{name:'本草纲目',author:'李时珍',period:'明万历年间',life:'1518—1593',desc:'东方药物巨典，52卷，载药1892种。'},{name:'天工开物',author:'宋应星',period:'明崇祯时',life:'1587—约1666',desc:'中国第一部生产技术百科全书，记农业手工业。'},{name:'农政全书',author:'徐光启',period:'明万历—崇祯时',life:'1562—1633',desc:'明代农学名著，兼收西方水利技术。'},{name:'三国演义',author:'罗贯中',period:'元末明初',life:'约1330—约1400',desc:'中国第一部长篇章回小说，历史小说鼻祖。'},{name:'水浒传',author:'施耐庵',period:'元末明初',life:'约1296—约1370',desc:'中国第一部白话长篇小说。'},{name:'西游记',author:'吴承恩',period:'明嘉靖—万历时',life:'约1500—1582',desc:'浪漫主义神魔小说巅峰。'},{name:'传习录',author:'王阳明',period:'明嘉靖时',life:'1472—1529',desc:'心学代表作，「知行合一」「致良知」。'}]},
+
+    {n:'清',s:1636,e:1912,c:'#7D6BAF',cap:'盛京（沈阳）→北京',years:'276年',
+     meta:'满族建立，经历康乾盛世，晚期沦为半殖民地，1912年辛亥革命终结帝制。',
+     rulers:[
+       {name:'努尔哈赤（追尊）',reign:'公元1616—1626年（在位11年）',deeds:'统一女真，建后金，创八旗。'},
+       {name:'皇太极',reign:'公元1626—1643年（在位17年）',deeds:'改国号清。'},
+       {name:'顺治帝（福临）',reign:'公元1644—1661年（在位18年）',deeds:'清军入关后第一位皇帝，定都北京。'},
+       {name:'康熙帝（玄烨）',reign:'公元1661—1722年（在位61年）',deeds:'擒鳌拜；平三藩；收台湾；雅克萨之战签《尼布楚条约》。'},
+       {name:'雍正帝（胤禛）',reign:'公元1722—1735年（在位13年）',deeds:'设军机处；摊丁入亩；改土归流。'},
+       {name:'乾隆帝（弘历）',reign:'公元1735—1795年（在位60年）',deeds:'十全武功；编《四库全书》；宠和珅。'},
+       {name:'嘉庆、道光（共两代）',reign:'公元1796—1850年（约55年）',deeds:'嘉庆诛和珅；公元1840年鸦片战争，签《南京条约》。'},
+       {name:'咸丰、同治（共两代）',reign:'公元1850—1875年（约26年）',deeds:'太平天国；英法联军火烧圆明园；慈禧（太后）垂帘听政。'},
+       {name:'光绪帝（载湉）',reign:'公元1875—1908年（在位34年）',deeds:'支持戊戌变法103天失败；被慈禧囚禁瀛台。'},
+       {name:'宣统帝（溥仪）',reign:'公元1908—1912年（在位4年）',deeds:'末代皇帝；辛亥革命爆发，公元1912年2月12日退位，帝制终结。'}
+     ],
+     stories:[
+       {name:'康乾盛世',tag:'正史',type:'econ',era:'康熙—乾隆·1662—1795年',desc:'康熙、雍正、乾隆三代一百三十四年，疆域达1300万平方公里，人口从一亿增至三亿。是中国传统社会最后一个盛世。'},
+       {name:'尼布楚条约',tag:'正史',type:'politics',era:'康熙·1689年',desc:'1689年康熙与沙俄签订，划定中俄东段边界。是中国与欧洲国家签订的第一个平等条约。'},
+       {name:'传位十四子改为传位于四子',tag:'存疑',type:'politics',era:'传说·雍正即位',desc:'传说雍正将康熙遗诏"传位十四子"改为"传位于四子"。但满文遗诏无此改法，现代史学家多认为是民间想象。'},
+       {name:'鸦片战争',tag:'正史',type:'military',era:'道光·1840年',desc:'1840年英国以林则徐虎门销烟为借口发动战争，清军战败签《南京条约》割香港。是中国近代史的开端。'},
+       {name:'改土归流',tag:'正史',type:'politics',era:'雍正·1726年起',desc:'雍正朝在西南少数民族地区废除世袭土司，改行中央任命的流官。加强了中央对西南边疆的直接管辖，促进了民族融合，但也伴随军事镇压。'},
+       {name:'闭关锁国',tag:'正史',type:'econ',era:'乾隆后·1757年起',desc:'乾隆以后仅留广州一口通商，由十三行垄断对外贸易，严格限制洋人来华与国人出海。这种政策在西方工业革命后严重落后，最终被鸦片战争强行打破。'},
+       {name:'戊戌变法',tag:'正史',type:'politics',era:'光绪/康有为·1898年',desc:'1898年光绪帝支持康有为、梁启超推行新政一百零三天，被慈禧发动政变扼杀。谭嗣同等六君子就义。'},
+       {name:'辛亥革命',tag:'正史',type:'politics',era:'孙中山·1911年',desc:'1911年10月10日武昌起义，各省响应。1912年1月1日中华民国成立，2月12日清帝退位，两千余年帝制终结。'}
+     ],books:[{name:'红楼梦',author:'曹雪芹',period:'清乾隆时',life:'约1715—1763',desc:'中国古典小说巅峰，四大之首，百科全书式世情小说。'},{name:'四库全书',author:'纪昀等编',period:'清乾隆时',life:'纪昀（1724—1805）等编',desc:'中国最大丛书，收书3503种，79337卷。'},{name:'聊斋志异',author:'蒲松龄',period:'清康熙时',life:'1640—1715',desc:'文言短篇小说巅峰，借鬼狐讽世。'},{name:'儒林外史',author:'吴敬梓',period:'清乾隆时',life:'1701—1754',desc:'中国长篇讽刺小说开山之作。'},{name:'康熙字典',author:'张玉书等',period:'清康熙时',life:'张玉书（1642—1711）等编',desc:'中国第一部字典，收字47035个。'},{name:'海国图志',author:'魏源',period:'清道光时',life:'1794—1857',desc:'近代开眼看世界第一书，提出「师夷长技以制夷」。'}]}
+  ]
+;
+})();
+</script>
+<script>
+(function(){
+  var rows=ROWS_DATA;
+  var colName=document.getElementById('colName');
+  var colInner=document.getElementById('colInner');
+  var rowsEl=document.getElementById('rows');
+  var overlay=document.getElementById('overlay');
+  var colScroll=document.getElementById('colScroll');
+  var currentMobilePanel=null;
+  function isMobile(){ return window.innerWidth<=640; }
+
+  // AD year divider
+  var divider=document.createElement('div');
+  divider.className='year-divider'; divider.style.left=P(0)+'px';
+  colInner.appendChild(divider);
+  var dividerLabel=document.createElement('div');
+  dividerLabel.className='year-divider-label'; dividerLabel.style.left=P(0)+'px';
+  dividerLabel.textContent='公元元年';
+  var refs=[-2000,-1000,1000];
+  for(var ri=0;ri<refs.length;ri++){
+    (function(yr){
+      var rl=document.createElement('div'); rl.className='ref-line'; rl.style.left=P(yr)+'px'; colInner.appendChild(rl);
+      var rlt=document.createElement('div'); rlt.className='ref-line-label'; rlt.style.left=P(yr)+'px'; rlt.textContent=(yr<0?'前'+(-yr):yr)+'年'; colInner.appendChild(rlt);
+    })(refs[ri]);
+  }
+  colInner.appendChild(dividerLabel);
+
+  function closeAll(){
+    if(currentMobilePanel){ colInner.appendChild(currentMobilePanel); currentMobilePanel=null; }
+    var ps=colInner.querySelectorAll('.panel');
+    for(var i=0;i<ps.length;i++) ps[i].classList.remove('open');
+    var rs=colInner.querySelectorAll('.dyn-row');
+    for(var j=0;j<rs.length;j++) rs[j].classList.remove('active');
+    overlay.classList.remove('show');
+    document.body.classList.remove('locked');
+  }
+  overlay.addEventListener('click', closeAll);
+
+  for(var r=0;r<rows.length;r++){
+    (function(d){
+      var nameEl=document.createElement('div');
+      nameEl.style.height='38px'; nameEl.style.lineHeight='38px'; nameEl.textContent=d.n;
+      nameEl.style.fontSize='12px'; nameEl.style.fontWeight='600'; nameEl.style.textAlign='right';
+      nameEl.style.paddingRight='8px'; nameEl.style.background='#FBFAF7';
+      colName.appendChild(nameEl);
+
+      var row=document.createElement('div'); row.className='dyn-row';
+      var bar=document.createElement('div'); bar.className='dyn-bar';
+      bar.style.left=P(d.s)+'px';
+      var wPx=P(d.e)-P(d.s); if(wPx<3) wPx=3;
+      bar.style.width=wPx+'px'; bar.style.background=d.c;
+      row.appendChild(bar);
+
+      var lab=document.createElement('div'); lab.className='dyn-bar-label';
+      lab.style.left=P(d.s)+'px';
+      lab.textContent=fmtRange(d.s,d.e)+' · '+d.years;
+      row.appendChild(lab);
+
+      var panel=document.createElement('div'); panel.className='panel';
+      var h='<div class="panel-close">×</div><div class="panel-head">';
+      h+='<h2>'+d.n+'<span class="badge" style="background:'+d.c+'">'+d.years+' · '+fmtRange(d.s,d.e)+'</span></h2>';
+      h+='<div class="meta"><b>都城：</b>'+d.cap+'</div></div><div class="panel-body">';
+      h+='<div style="color:#666;font-size:12.5px;margin-bottom:8px;">'+d.meta+'</div>';
+      h+='<div class="rulers"><b style="color:#B5485F;">君主世系（自上而下顺序）：</b>';
+      for(var k=0;k<d.rulers.length;k++){
+        var ru=d.rulers[k];
+        h+='<div class="ruler'+(ru.note?' collapsed':'')+'">';
+        h+='<div class="ruler-name">'+ru.name+'<span class="reign">'+ru.reign+'</span></div>';
+        h+='<div class="ruler-deeds">'+ru.deeds+'</div>';
+        if(ru.note) h+='<div class="ruler-note">'+ru.note+'</div>';
+        h+='</div>';
+      }
+      h+='</div>';
+      if(d.books && d.books.length){
+        h+='<div class="section"><div class="section-title">经典著作</div>';
+        for(var b=0;b<d.books.length;b++){
+          var bk=d.books[b];
+          h+='<div style="margin:5px 0;padding:5px 8px;background:#fafafa;border-radius:6px;"><div style="font-weight:600;color:#1A1B1C;">《'+bk.name+'》</div><div style="font-size:11px;color:#888;margin:2px 0;">'+bk.author+(bk.life?'（'+bk.life+'）':'')+(bk.period?' · '+bk.period:'')+'</div><div style="font-size:12.5px;color:#555;line-height:1.5;margin-top:3px;">'+bk.desc+'</div></div>';
+        }
+        h+='</div>';
+      }
+      if(d.stories && d.stories.length){
+        h+='<div class="section"><div class="section-title">典故与成语（点击展开）</div>';
+        for(var s=0;s<d.stories.length;s++){
+          var st=d.stories[s];
+          h+='<div class="story"><div class="story-line"><span class="story-arrow">▶</span><span class="story-name">'+st.name+'</span>'+tagHtml(st.tag);
+      if(st.type){ var TC={'politics':'政治制度','military':'军事战争','econ':'经济政策','culture':'文化思想','idiom':'典故成语'}; h+='<span class="story-type t-'+st.type+'">'+TC[st.type]+'</span>'; }
+      if(st.era){ h+='<span class="story-meta">'+st.era+'</span>'; }
+      h+='</div>';
+          h+='<div class="story-desc">'+st.desc+'</div></div>';
+        }
+        h+='</div>';
+      }
+      h+='</div>';
+      panel.innerHTML=h;
+
+      panel.querySelector('.panel-close').addEventListener('click', function(e){
+        e.stopPropagation(); closeAll(); row.classList.remove('active');
+      });
+      var storyEls=panel.querySelectorAll('.story');
+      storyEls.forEach(function(se){
+        se.addEventListener('click', function(){ se.classList.toggle('open'); });
+      });
+
+      row.addEventListener('click',function(e){
+        e.stopPropagation();
+        if(panel.classList.contains('open')){
+          closeAll(); row.classList.remove('active');
+        } else {
+          closeAll();
+          panel.classList.add('open'); row.classList.add('active');
+          if(isMobile()){
+            document.body.appendChild(panel);
+            currentMobilePanel=panel;
+            overlay.classList.add('show');
+            document.body.classList.add('locked');
+            setTimeout(function(){ panel.scrollTop=0; }, 50);
+          }
+        }
+      });
+
+      rowsEl.appendChild(row);
+      colInner.appendChild(panel);
+    })(rows[r]);
+  }
+})();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
